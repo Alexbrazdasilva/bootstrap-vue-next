@@ -1,31 +1,19 @@
 <template>
-  <img :class="computedClasses" v-bind="computedAttrs" />
+  <img
+    :class="computedClasses"
+    :src="!blankBoolean ? props.src : computedBlankImgSrc"
+    :width="computedDimentions.width || undefined"
+    :height="computedDimentions.height || undefined"
+    :srcset="!blankBoolean ? computedSrcset : undefined"
+    :sizes="!blankBoolean ? computedSizes : undefined"
+    :loading="lazyBoolean ? 'lazy' : 'eager'"
+  />
 </template>
 
 <script setup lang="ts">
-import type {Booleanish} from '../types'
+import type {BImgProps} from '../types'
 import {useBooleanish} from '../composables'
 import {computed} from 'vue'
-
-interface BImgProps {
-  alt?: string
-  blank?: Booleanish
-  blankColor?: string
-  block?: Booleanish
-  center?: Booleanish
-  fluid?: Booleanish
-  lazy?: Booleanish
-  fluidGrow?: Booleanish
-  height?: number | string
-  start?: Booleanish
-  end?: Booleanish
-  rounded?: boolean | string
-  sizes?: string | string[]
-  src?: string
-  srcset?: string | string[]
-  thumbnail?: Booleanish
-  width?: number | string
-}
 
 const props = withDefaults(defineProps<BImgProps>(), {
   sizes: undefined,
@@ -33,7 +21,6 @@ const props = withDefaults(defineProps<BImgProps>(), {
   srcset: undefined,
   width: undefined,
   height: undefined,
-  alt: undefined,
   blank: false,
   lazy: false,
   blankColor: 'transparent',
@@ -115,16 +102,6 @@ const computedDimentions = computed<{height: number | undefined; width: number |
 const computedBlankImgSrc = computed(() =>
   makeBlankImgSrc(computedDimentions.value.width, computedDimentions.value.height, props.blankColor)
 )
-
-const computedAttrs = computed(() => ({
-  src: !blankBoolean.value ? props.src : computedBlankImgSrc.value,
-  alt: props.alt,
-  width: computedDimentions.value.width || undefined,
-  height: computedDimentions.value.height || undefined,
-  srcset: !blankBoolean.value ? computedSrcset.value : undefined,
-  sizes: !blankBoolean.value ? computedSizes.value : undefined,
-  loading: lazyBoolean.value ? 'lazy' : 'eager',
-}))
 
 const alignment = computed<'float-start' | 'float-end' | 'mx-auto' | undefined>(() =>
   startBoolean.value

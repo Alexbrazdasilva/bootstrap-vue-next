@@ -1,6 +1,6 @@
 <template>
   <li role="presentation">
-    <p class="px-4 py-1 mb-0 text-muted">
+    <p class="px-4 py-1 mb-0 text-body-secondary">
       <slot>
         {{ text }}
       </slot>
@@ -9,13 +9,14 @@
 </template>
 
 <script setup lang="ts">
-interface BDropdownTextProps {
-  text?: string
-}
-
-withDefaults(defineProps<BDropdownTextProps>(), {
-  text: '',
-})
+withDefaults(
+  defineProps<{
+    text?: string
+  }>(),
+  {
+    text: '',
+  }
+)
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

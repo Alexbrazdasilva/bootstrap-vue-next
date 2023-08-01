@@ -1,7 +1,11 @@
 <template>
   <slot
+    :id="computedId"
     name="header"
-    v-bind="{visible: modelValueBoolean, toggle: toggleFn, open, close, id: computedId}"
+    :visible="modelValueBoolean"
+    :toggle="toggleFn"
+    :open="open"
+    :close="close"
   />
   <component
     :is="tag"
@@ -12,11 +16,15 @@
     :is-nav="isNavBoolean"
     v-bind="$attrs"
   >
-    <slot v-bind="{visible: modelValueBoolean, toggle, open, close}" />
+    <slot :visible="modelValueBoolean" :toggle="toggle" :open="open" :close="close" />
   </component>
   <slot
+    :id="computedId"
     name="footer"
-    v-bind="{visible: modelValueBoolean, toggle: toggleFn, open, close, id: computedId}"
+    :visible="modelValueBoolean"
+    :toggle="toggleFn"
+    :open="open"
+    :close="close"
   />
 </template>
 
@@ -31,39 +39,38 @@ defineOptions({
   inheritAttrs: false,
 })
 
-interface BCollapseProps {
-  // appear?: Booleanish
-  id?: string
-  modelValue?: Booleanish
-  tag?: string
-  toggle?: Booleanish
-  horizontal?: Booleanish
-  visible?: Booleanish
-  isNav?: Booleanish
-}
+const props = withDefaults(
+  defineProps<{
+    // appear?: Booleanish
+    id?: string
+    modelValue?: Booleanish
+    tag?: string
+    toggle?: Booleanish
+    horizontal?: Booleanish
+    visible?: Booleanish
+    isNav?: Booleanish
+  }>(),
+  {
+    accordion: undefined,
+    id: undefined,
+    modelValue: false,
+    tag: 'div',
+    toggle: false,
+    horizontal: false,
+    visible: false,
+    isNav: false,
+  }
+)
 
-interface BCollapseEmits {
-  (e: 'show', value: BvTriggerableEvent): void
-  (e: 'shown', value: BvTriggerableEvent): void
-  (e: 'hide', value: BvTriggerableEvent): void
-  (e: 'hidden', value: BvTriggerableEvent): void
-  (e: 'hide-prevented'): void
-  (e: 'show-prevented'): void
-  (e: 'update:modelValue', value: boolean): void
-}
-
-const props = withDefaults(defineProps<BCollapseProps>(), {
-  accordion: undefined,
-  id: undefined,
-  modelValue: false,
-  tag: 'div',
-  toggle: false,
-  horizontal: false,
-  visible: false,
-  isNav: false,
-})
-
-const emit = defineEmits<BCollapseEmits>()
+const emit = defineEmits<{
+  'show': [value: BvTriggerableEvent]
+  'shown': [value: BvTriggerableEvent]
+  'hide': [value: BvTriggerableEvent]
+  'hidden': [value: BvTriggerableEvent]
+  'hide-prevented': []
+  'show-prevented': []
+  'update:modelValue': [value: boolean]
+}>()
 
 defineSlots<{
   header?: (props: {

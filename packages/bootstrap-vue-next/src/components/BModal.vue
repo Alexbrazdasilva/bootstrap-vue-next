@@ -1,6 +1,6 @@
 <template>
-  <teleport to="body" :disabled="staticBoolean">
-    <b-transition
+  <Teleport :to="teleportTo" :disabled="teleportDisabledBoolean">
+    <BTransition
       :no-fade="true"
       :trans-props="{enterToClass: 'show'}"
       @before-enter="onBeforeEnter"
@@ -19,7 +19,6 @@
         :aria-describedby="`${computedId}-body`"
         tabindex="-1"
         v-bind="$attrs"
-        @keyup.esc="hide('esc')"
       >
         <div class="modal-dialog" :class="modalDialogClasses">
           <div v-if="lazyShowing" class="modal-content" :class="contentClass">
@@ -39,7 +38,7 @@
                   <button v-if="hasHeaderCloseSlot" type="button" @click="hide('close')">
                     <slot name="header-close" />
                   </button>
-                  <b-close-button
+                  <BCloseButton
                     v-else
                     ref="closeButton"
                     :aria-label="headerCloseLabel"
@@ -55,7 +54,7 @@
             <div v-if="!hideFooterBoolean" class="modal-footer" :class="footerClasses">
               <slot name="footer">
                 <slot name="cancel">
-                  <b-button
+                  <BButton
                     v-if="!okOnlyBoolean"
                     ref="cancelButton"
                     :disabled="disableCancel"
@@ -64,10 +63,10 @@
                     @click="hide('cancel')"
                   >
                     {{ cancelTitle }}
-                  </b-button>
+                  </BButton>
                 </slot>
                 <slot name="ok">
-                  <b-button
+                  <BButton
                     ref="okButton"
                     :disabled="disableOk"
                     :size="buttonSize"
@@ -75,29 +74,38 @@
                     @click="hide('ok')"
                   >
                     {{ okTitle }}
-                  </b-button>
+                  </BButton>
                 </slot>
               </slot>
             </div>
           </div>
         </div>
-        <slot v-if="!hideBackdropBoolean" name="backdrop">
-          <div class="modal-backdrop fade show" @click="hide('backdrop')" />
+        <slot name="backdrop">
+          <BOverlay
+            :variant="computedBackdropVariant"
+            :show="modelValueBoolean"
+            no-spinner
+            fixed
+            no-wrap
+            blur="0px"
+            @click="hide('backdrop')"
+          />
         </slot>
       </div>
-    </b-transition>
-  </teleport>
+    </BTransition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import {computed, ref, useSlots} from 'vue'
-import {useBooleanish, useId, useModalManager} from '../composables'
-import {useEventListener, useFocus, useVModel} from '@vueuse/core'
+import {computed, ref, type RendererElement, useSlots} from 'vue'
+import {useBooleanish, useId, useModalManager, useSafeScrollLock} from '../composables'
+import {onKeyStroke, useEventListener, useFocus, useVModel} from '@vueuse/core'
 import type {Booleanish, ButtonVariant, ClassValue, ColorVariant, Size} from '../types'
 import {BvTriggerableEvent, isEmptySlot} from '../utils'
 import BButton from './BButton/BButton.vue'
 import BCloseButton from './BButton/BCloseButton.vue'
 import BTransition from './BTransition/BTransition.vue'
+import BOverlay from './BOverlay/BOverlay.vue'
 
 defineOptions({
   inheritAttrs: false,
@@ -110,120 +118,125 @@ defineOptions({
 // Note, attempt to return focus to item that openned the modal after close
 // Implement auto focus props like autoFocusButton
 
-interface BModalProps {
-  bodyBgVariant?: ColorVariant | null
-  bodyClass?: ClassValue
-  bodyTextVariant?: ColorVariant | null
-  busy?: Booleanish
-  lazy?: Booleanish
-  buttonSize?: Size
-  cancelDisabled?: Booleanish
-  cancelTitle?: string
-  cancelVariant?: ButtonVariant | null
-  centered?: Booleanish
-  contentClass?: ClassValue
-  dialogClass?: ClassValue
-  footerBgVariant?: ColorVariant | null
-  footerBorderVariant?: ColorVariant | null
-  footerClass?: ClassValue
-  footerTextVariant?: ColorVariant | null
-  fullscreen?: boolean | string
-  headerBgVariant?: ColorVariant | null
-  headerBorderVariant?: ColorVariant | null
-  headerClass?: ClassValue
-  headerCloseLabel?: string
-  headerCloseWhite?: Booleanish
-  headerTextVariant?: ColorVariant | null
-  hideBackdrop?: Booleanish
-  hideFooter?: Booleanish
-  hideHeader?: Booleanish
-  hideHeaderClose?: Booleanish
-  id?: string
-  modalClass?: ClassValue
-  modelValue?: Booleanish
-  noCloseOnBackdrop?: Booleanish
-  noCloseOnEsc?: Booleanish
-  noFade?: Booleanish
-  autoFocus?: Booleanish
-  okDisabled?: Booleanish
-  okOnly?: Booleanish
-  okTitle?: string
-  okVariant?: ButtonVariant | null
-  scrollable?: Booleanish
-  show?: Booleanish
-  size?: Size | 'xl'
-  title?: string
-  titleClass?: string
-  titleSrOnly?: Booleanish
-  titleTag?: string
-  static?: Booleanish
-  autoFocusButton?: 'ok' | 'cancel' | 'close'
-}
+const props = withDefaults(
+  defineProps<{
+    bodyBgVariant?: ColorVariant | null
+    bodyClass?: ClassValue
+    bodyTextVariant?: ColorVariant | null
+    busy?: Booleanish
+    lazy?: Booleanish
+    buttonSize?: Size
+    cancelDisabled?: Booleanish
+    cancelTitle?: string
+    cancelVariant?: ButtonVariant | null
+    centered?: Booleanish
+    contentClass?: ClassValue
+    dialogClass?: ClassValue
+    footerBgVariant?: ColorVariant | null
+    footerBorderVariant?: ColorVariant | null
+    footerClass?: ClassValue
+    footerTextVariant?: ColorVariant | null
+    fullscreen?: boolean | string
+    headerBgVariant?: ColorVariant | null
+    headerBorderVariant?: ColorVariant | null
+    headerClass?: ClassValue
+    headerCloseLabel?: string
+    headerCloseWhite?: Booleanish
+    headerTextVariant?: ColorVariant | null
+    hideBackdrop?: Booleanish
+    hideFooter?: Booleanish
+    hideHeader?: Booleanish
+    hideHeaderClose?: Booleanish
+    id?: string
+    modalClass?: ClassValue
+    modelValue?: Booleanish
+    noCloseOnBackdrop?: Booleanish
+    noCloseOnEsc?: Booleanish
+    noFade?: Booleanish
+    autoFocus?: Booleanish
+    okDisabled?: Booleanish
+    okOnly?: Booleanish
+    okTitle?: string
+    okVariant?: ButtonVariant | null
+    scrollable?: Booleanish
+    show?: Booleanish
+    size?: Size | 'xl'
+    title?: string
+    titleClass?: ClassValue
+    titleSrOnly?: Booleanish
+    titleTag?: string
+    autoFocusButton?: 'ok' | 'cancel' | 'close'
+    teleportDisabled?: Booleanish
+    teleportTo?: string | RendererElement | null | undefined
+    bodyScrolling?: Booleanish
+    backdropVariant?: ColorVariant | null
+  }>(),
+  {
+    backdropVariant: undefined,
+    bodyBgVariant: null,
+    bodyClass: undefined,
+    bodyTextVariant: null,
+    contentClass: undefined,
+    headerTextVariant: null,
+    dialogClass: undefined,
+    headerBgVariant: null,
+    headerBorderVariant: null,
+    headerClass: undefined,
+    footerBgVariant: null,
+    footerBorderVariant: null,
+    footerClass: undefined,
+    footerTextVariant: null,
+    autoFocusButton: undefined,
+    titleClass: undefined,
+    title: undefined,
+    size: 'md',
+    modalClass: undefined,
+    id: undefined,
+    busy: false,
+    lazy: false,
+    buttonSize: 'md',
+    cancelDisabled: false,
+    cancelTitle: 'Cancel',
+    cancelVariant: 'secondary',
+    centered: false,
+    fullscreen: false,
+    headerCloseLabel: 'Close',
+    headerCloseWhite: false,
+    hideBackdrop: false,
+    hideFooter: false,
+    hideHeader: false,
+    hideHeaderClose: false,
+    modelValue: false,
+    noCloseOnBackdrop: false,
+    noCloseOnEsc: false,
+    noFade: false,
+    autoFocus: true,
+    okDisabled: false,
+    okOnly: false,
+    okTitle: 'Ok',
+    okVariant: 'primary',
+    scrollable: false,
+    show: false,
+    titleSrOnly: false,
+    titleTag: 'h5',
+    teleportDisabled: false,
+    teleportTo: 'body',
+    bodyScrolling: false,
+  }
+)
 
-const props = withDefaults(defineProps<BModalProps>(), {
-  bodyBgVariant: null,
-  bodyClass: undefined,
-  bodyTextVariant: null,
-  contentClass: undefined,
-  headerTextVariant: null,
-  dialogClass: undefined,
-  headerBgVariant: null,
-  headerBorderVariant: null,
-  headerClass: undefined,
-  footerBgVariant: null,
-  footerBorderVariant: null,
-  footerClass: undefined,
-  footerTextVariant: null,
-  autoFocusButton: undefined,
-  titleClass: undefined,
-  title: undefined,
-  size: 'md',
-  modalClass: undefined,
-  id: undefined,
-  busy: false,
-  lazy: false,
-  buttonSize: 'md',
-  cancelDisabled: false,
-  cancelTitle: 'Cancel',
-  cancelVariant: 'secondary',
-  centered: false,
-  fullscreen: false,
-  headerCloseLabel: 'Close',
-  headerCloseWhite: false,
-  hideBackdrop: false,
-  hideFooter: false,
-  hideHeader: false,
-  hideHeaderClose: false,
-  modelValue: false,
-  noCloseOnBackdrop: false,
-  noCloseOnEsc: false,
-  noFade: false,
-  autoFocus: true,
-  okDisabled: false,
-  okOnly: false,
-  okTitle: 'Ok',
-  static: false,
-  okVariant: 'primary',
-  scrollable: false,
-  show: false,
-  titleSrOnly: false,
-  titleTag: 'h5',
-})
-
-interface BModalEmits {
-  (e: 'update:modelValue', value: boolean): void
-  (e: 'show', value: BvTriggerableEvent): void
-  (e: 'shown', value: BvTriggerableEvent): void
-  (e: 'hide', value: BvTriggerableEvent): void
-  (e: 'hidden', value: BvTriggerableEvent): void
-  (e: 'hide-prevented'): void
-  (e: 'show-prevented'): void
-  (e: 'ok', value: BvTriggerableEvent): void
-  (e: 'cancel', value: BvTriggerableEvent): void
-  (e: 'close', value: BvTriggerableEvent): void
-}
-
-const emit = defineEmits<BModalEmits>()
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'show': [value: BvTriggerableEvent]
+  'shown': [value: BvTriggerableEvent]
+  'hide': [value: BvTriggerableEvent]
+  'hidden': [value: BvTriggerableEvent]
+  'hide-prevented': []
+  'show-prevented': []
+  'ok': [value: BvTriggerableEvent]
+  'cancel': [value: BvTriggerableEvent]
+  'close': [value: BvTriggerableEvent]
+}>()
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -267,7 +280,8 @@ const okDisabledBoolean = useBooleanish(() => props.okDisabled)
 const okOnlyBoolean = useBooleanish(() => props.okOnly)
 const scrollableBoolean = useBooleanish(() => props.scrollable)
 const titleSrOnlyBoolean = useBooleanish(() => props.titleSrOnly)
-const staticBoolean = useBooleanish(() => props.static)
+const teleportDisabledBoolean = useBooleanish(() => props.teleportDisabled)
+const bodyScrollingBoolean = useBooleanish(() => props.bodyScrolling)
 
 const element = ref<HTMLElement | null>(null)
 const okButton = ref<HTMLElement | null>(null)
@@ -276,6 +290,14 @@ const closeButton = ref<HTMLElement | null>(null)
 const isActive = ref(modelValueBoolean.value)
 const lazyLoadCompleted = ref(false)
 
+onKeyStroke(
+  'Escape',
+  () => {
+    hide('esc')
+  },
+  {target: element}
+)
+useSafeScrollLock(modelValueBoolean, bodyScrollingBoolean)
 const {focused: modalFocus} = useFocus(element, {
   initialValue: modelValueBoolean.value && props.autoFocusButton === undefined,
 })
@@ -302,6 +324,14 @@ const lazyShowing = computed(
     lazyBoolean.value === false ||
     (lazyBoolean.value === true && lazyLoadCompleted.value === true) ||
     (lazyBoolean.value === true && modelValueBoolean.value === true)
+)
+
+const computedBackdropVariant = computed(() =>
+  props.backdropVariant !== undefined
+    ? props.backdropVariant
+    : hideBackdropBoolean.value
+    ? 'transparent'
+    : 'dark'
 )
 
 const hasHeaderCloseSlot = computed(() => !isEmptySlot(slots['header-close']))
@@ -392,7 +422,7 @@ const hide = (trigger = '') => {
 
 // TODO: If a show is prevented, it will briefly show the animation. This is a bug
 // I'm not sure how to wait for the event to be determined. Before showing
-const show = () => {
+const showFn = () => {
   const event = buildTriggerableEvent('show', {cancelable: true})
   emit('show', event)
   if (event.defaultPrevented) {
@@ -414,7 +444,7 @@ const pickFocusItem = () => {
     : (modalFocus.value = true)
 }
 
-const onBeforeEnter = () => show()
+const onBeforeEnter = () => showFn()
 const onAfterEnter = () => {
   isActive.value = true
   pickFocusItem()
@@ -432,12 +462,12 @@ const onAfterLeave = () => {
 useModalManager(isActive)
 
 useEventListener(element, 'bv-toggle', () => {
-  modelValueBoolean.value ? hide() : show()
+  modelValueBoolean.value ? hide() : showFn()
 })
 
 defineExpose({
   hide,
-  show,
+  show: showFn,
 })
 </script>
 

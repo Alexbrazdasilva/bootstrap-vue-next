@@ -1,5 +1,10 @@
 <template>
-  <component :is="tag" :class="computedClasses" v-bind="computedAttrs">
+  <component
+    :is="tag"
+    :class="computedClasses"
+    :aria-live="ariaLive"
+    :aria-atomic="ariaLive ? true : undefined"
+  >
     <slot>
       {{ text }}
     </slot>
@@ -11,27 +16,24 @@ import {computed} from 'vue'
 import type {Booleanish} from '../../types'
 import {useBooleanish} from '../../composables'
 
-interface BFormInvalidFeedbackProps {
-  ariaLive?: string
-  forceShow?: Booleanish
-  id?: string
-  text?: string
-  role?: string
-  state?: Booleanish | null
-  tag?: string
-  tooltip?: Booleanish
-}
-
-const props = withDefaults(defineProps<BFormInvalidFeedbackProps>(), {
-  id: undefined,
-  text: undefined,
-  role: undefined,
-  ariaLive: undefined,
-  forceShow: false,
-  tag: 'div',
-  state: null,
-  tooltip: false,
-})
+const props = withDefaults(
+  defineProps<{
+    ariaLive?: string
+    forceShow?: Booleanish
+    text?: string
+    state?: Booleanish | null
+    tag?: string
+    tooltip?: Booleanish
+  }>(),
+  {
+    text: undefined,
+    ariaLive: undefined,
+    forceShow: false,
+    tag: 'div',
+    state: null,
+    tooltip: false,
+  }
+)
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,12 +52,5 @@ const computedClasses = computed(() => ({
   'd-block': computedShow.value,
   'invalid-feedback': !tooltipBoolean.value,
   'invalid-tooltip': tooltipBoolean.value,
-}))
-
-const computedAttrs = computed(() => ({
-  'id': props.id,
-  'role': props.role,
-  'aria-live': props.ariaLive,
-  'aria-atomic': props.ariaLive ? true : undefined,
 }))
 </script>

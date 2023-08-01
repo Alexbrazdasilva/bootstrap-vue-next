@@ -13,27 +13,26 @@ import type {Booleanish, Breakpoint, ColorVariant} from '../../types'
 import {useBooleanish} from '../../composables'
 import {navbarInjectionKey} from '../../utils'
 
-interface Props {
-  fixed?: 'top' | 'bottom'
-  print?: Booleanish
-  sticky?: 'top' | 'bottom'
-  tag?: string
-  toggleable?: boolean | Breakpoint
-  dark?: Booleanish
-  variant?: ColorVariant | null
-  container?: 'fluid' | boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  variant: null,
-  sticky: undefined,
-  fixed: undefined,
-  print: false,
-  tag: 'nav',
-  dark: false,
-  toggleable: false,
-  container: 'fluid',
-})
+const props = withDefaults(
+  defineProps<{
+    fixed?: 'top' | 'bottom'
+    print?: Booleanish
+    sticky?: 'top' | 'bottom'
+    tag?: string
+    toggleable?: boolean | Breakpoint
+    variant?: ColorVariant | null
+    container?: 'fluid' | boolean
+  }>(),
+  {
+    variant: null,
+    sticky: undefined,
+    fixed: undefined,
+    print: false,
+    tag: 'nav',
+    toggleable: false,
+    container: 'fluid',
+  }
+)
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,7 +40,6 @@ defineSlots<{
 }>()
 
 const printBoolean = useBooleanish(() => props.print)
-const darkBoolean = useBooleanish(() => props.dark)
 
 const computedRole = computed<undefined | 'navigation'>(() =>
   props.tag === 'nav' ? undefined : 'navigation'
@@ -55,14 +53,11 @@ const computedNavbarExpand = computed<undefined | string>(() =>
     : undefined
 )
 
-const containerClass = computed<'container' | 'container-fluid'>(() =>
-  props.container === true ? 'container' : `container-fluid`
-)
+const containerClass = computed(() => (props.container === true ? 'container' : `container-fluid`))
 
 const computedClasses = computed(() => ({
   'd-print': printBoolean.value,
   [`sticky-${props.sticky}`]: props.sticky !== undefined,
-  'navbar-dark': darkBoolean.value,
   [`bg-${props.variant}`]: props.variant !== null,
   [`fixed-${props.fixed}`]: props.fixed !== undefined,
   [`${computedNavbarExpand.value}`]: computedNavbarExpand.value !== undefined,

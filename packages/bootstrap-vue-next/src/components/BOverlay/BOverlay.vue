@@ -1,7 +1,7 @@
 <template>
   <component :is="wrapTag" class="b-overlay-wrap position-relative" :aria-busy="computedAriaBusy">
     <slot />
-    <b-transition
+    <BTransition
       :no-fade="noFade"
       :trans-props="{enterToClass: 'show'}"
       name="fade"
@@ -11,6 +11,7 @@
       <component
         :is="overlayTag"
         v-if="showBoolean"
+        class="b-overlay"
         :class="overlayClasses"
         :style="overlayStyles"
         @click="emit('click', $event)"
@@ -19,11 +20,11 @@
 
         <div class="position-absolute" :style="spinWrapperStyles">
           <slot name="overlay" v-bind="spinnerAttrs">
-            <b-spinner v-if="!noSpinnerBoolean" v-bind="spinnerAttrs" />
+            <BSpinner v-if="!noSpinnerBoolean" v-bind="spinnerAttrs" />
           </slot>
         </div>
       </component>
-    </b-transition>
+    </BTransition>
   </component>
 </template>
 
@@ -34,63 +35,57 @@ import {useBooleanish} from '../../composables'
 import BTransition from '../BTransition/BTransition.vue'
 import BSpinner from '../BSpinner.vue'
 
-interface Props {
-  bgColor?: string
-  blur?: string
-  fixed?: Booleanish
-  noCenter?: Booleanish
-  noFade?: Booleanish
-  noWrap?: Booleanish
-  opacity?: number | string
-  overlayTag?: string
-  rounded?: boolean | string
-  show?: Booleanish
-  spinnerSmall?: Booleanish
-  spinnerType?: SpinnerType
-  spinnerVariant?: ColorVariant | null
-  noSpinner?: Booleanish
-  variant?: ColorVariant | 'white' | 'transparent' | null
-  wrapTag?: string
-  zIndex?: number | string
-}
+const props = withDefaults(
+  defineProps<{
+    bgColor?: string
+    blur?: string
+    fixed?: Booleanish
+    noCenter?: Booleanish
+    noFade?: Booleanish
+    noWrap?: Booleanish
+    opacity?: number | string
+    overlayTag?: string
+    rounded?: boolean | string
+    show?: Booleanish
+    spinnerSmall?: Booleanish
+    spinnerType?: SpinnerType
+    spinnerVariant?: ColorVariant | null
+    noSpinner?: Booleanish
+    variant?: ColorVariant | 'white' | 'transparent' | null
+    wrapTag?: string
+    zIndex?: number | string
+  }>(),
+  {
+    blur: '2px',
+    bgColor: undefined,
+    spinnerVariant: undefined,
+    fixed: false,
+    noCenter: false,
+    noSpinner: false,
+    noFade: false,
+    noWrap: false,
+    opacity: 0.85,
+    overlayTag: 'div',
+    rounded: false,
+    show: false,
+    spinnerSmall: false,
+    spinnerType: 'border',
+    variant: 'light',
+    wrapTag: 'div',
+    zIndex: 10,
+  }
+)
 
-const props = withDefaults(defineProps<Props>(), {
-  blur: '2px',
-  bgColor: undefined,
-  spinnerVariant: undefined,
-  fixed: false,
-  noCenter: false,
-  noSpinner: false,
-  noFade: false,
-  noWrap: false,
-  opacity: 0.85,
-  overlayTag: 'div',
-  rounded: false,
-  show: false,
-  spinnerSmall: false,
-  spinnerType: 'border',
-  variant: 'light',
-  wrapTag: 'div',
-  zIndex: 10,
-})
-
-interface Emits {
-  (e: 'click', value: MouseEvent): void
-  (e: 'hidden'): void
-  (e: 'shown'): void
-}
-
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  click: [value: MouseEvent]
+  hidden: []
+  shown: []
+}>()
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   default?: (props: Record<string, never>) => any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  overlay?: (props: {
-    type: SpinnerType
-    variant: ColorVariant | null | undefined
-    small: boolean
-  }) => any
+  overlay?: (props: typeof spinnerAttrs.value) => any
 }>()
 
 const positionStyles = {top: 0, left: 0, bottom: 0, right: 0}
@@ -127,13 +122,10 @@ const overlayStyles = computed(() => ({
   zIndex: props.zIndex || 10,
 }))
 
-const overlayClasses = computed(() => [
-  'b-overlay',
-  {
-    'position-absolute': !noWrapBoolean.value || !fixedBoolean.value,
-    'position-fixed': noWrapBoolean.value && fixedBoolean.value,
-  },
-])
+const overlayClasses = computed(() => ({
+  'position-absolute': !noWrapBoolean.value || !fixedBoolean.value,
+  'position-fixed': noWrapBoolean.value && fixedBoolean.value,
+}))
 
 const blurClasses = computed(() => [computedVariant.value, computedRounded.value])
 

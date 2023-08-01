@@ -1,9 +1,15 @@
 <template>
-  <li role="presentation" :class="$attrs.class">
+  <li role="presentation">
     <component
       :is="tag"
       class="dropdown-item"
       :class="computedClasses"
+      :disabled="disabledBoolean"
+      :aria-current="activeBoolean ? true : null"
+      :href="tag === 'a' ? href : null"
+      :rel="rel"
+      :type="tag === 'button' ? 'button' : null"
+      :target="target"
       v-bind="componentAttrs"
       @click="clicked"
     >
@@ -23,34 +29,33 @@ defineOptions({
   inheritAttrs: false,
 })
 
-interface BDropdownItemProps {
-  href?: string
-  linkClass?: ClassValue
-  active?: Booleanish
-  disabled?: Booleanish
-  rel?: string
-  target?: LinkTarget
-  variant?: ColorVariant | null
-}
+const props = withDefaults(
+  defineProps<{
+    href?: string
+    linkClass?: ClassValue
+    active?: Booleanish
+    disabled?: Booleanish
+    rel?: string
+    target?: LinkTarget
+    variant?: ColorVariant | null
+  }>(),
+  {
+    active: false,
+    disabled: false,
+    rel: undefined,
+    target: '_self',
+    variant: null,
+    linkClass: undefined,
+    href: undefined,
+  }
+)
 
-const props = withDefaults(defineProps<BDropdownItemProps>(), {
-  active: false,
-  disabled: false,
-  rel: undefined,
-  target: '_self',
-  variant: null,
-  linkClass: undefined,
-  href: undefined,
-})
+const emit = defineEmits<{
+  click: [value: MouseEvent]
+}>()
 
 const activeBoolean = useBooleanish(() => props.active)
 const disabledBoolean = useBooleanish(() => props.disabled)
-
-interface BDropdownItemEmits {
-  (e: 'click', value: MouseEvent): void
-}
-
-const emit = defineEmits<BDropdownItemEmits>()
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,12 +78,6 @@ const tag = computed<'button' | 'a' | typeof BLink>(() =>
 )
 
 const componentAttrs = computed(() => ({
-  'disabled': disabledBoolean.value,
-  'aria-current': activeBoolean.value ? true : null,
-  'href': tag.value === 'a' ? props.href : null,
-  'rel': props.rel,
-  'type': tag.value === 'button' ? 'button' : null,
-  'target': props.target,
   ...(attrs.to ? {activeClass: 'active', ...attrs} : attrs),
 }))
 

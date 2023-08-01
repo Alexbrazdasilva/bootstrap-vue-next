@@ -1,58 +1,41 @@
 <template>
   <div class="bd-links-nav">
-    <b-list-group v-if="!isLargeScreen">
-      <strong class="bd-links-heading"><gear-icon aria-hidden /> General</strong>
-      <b-list-group-item>
-        <b-link :to="withBase('/docs')">Getting Started</b-link>
-      </b-list-group-item>
-      <b-list-group-item>
-        <b-link :to="withBase('/docs/icons')">Icons</b-link>
-      </b-list-group-item>
-      <b-list-group-item>
-        <b-link :to="withBase('/docs/types')">Types</b-link>
-      </b-list-group-item>
-      <b-list-group-item>
-        <b-link :to="withBase('/docs/migration-guide')">Migrate</b-link>
-      </b-list-group-item>
-    </b-list-group>
-    <b-list-group>
+    <BListGroup v-if="!isLargeScreen">
+      <strong class="bd-links-heading"> <GearIcon aria-hidden /> General </strong>
+      <BListGroupItem v-for="link in headerLinks" :key="link.label">
+        <BLink
+          :to="link.route"
+          :active="routerRoute.path === `${link.route}.html`"
+          class="px-2 ms-2 rounded"
+          active-class="bg-primary text-light"
+          >{{ link.label }}</BLink
+        >
+      </BListGroupItem>
+    </BListGroup>
+    <BListGroup v-for="group in groupComputedList" :key="group.label">
       <strong class="bd-links-heading">
-        <b-link :to="withBase('/docs/components')">
-          <intersect-icon aria-hidden /> Components
-        </b-link>
+        <BLink :to="withBase(group.uri)">
+          <component :is="group.icon()" /> {{ group.label }}
+        </BLink>
       </strong>
-      <b-list-group-item v-for="component in componentsComputedList" :key="component.name">
-        <b-link :to="component.route">{{ component.name }}</b-link>
-      </b-list-group-item>
-    </b-list-group>
-    <b-list-group>
-      <strong class="bd-links-heading">
-        <b-link :to="withBase('/docs/composables')">
-          <pie-chart-icon aria-hidden /> Composables
-        </b-link>
-      </strong>
-      <b-list-group-item v-for="component in composablesComputedList" :key="component.name">
-        <b-link :to="component.route">{{ component.name }}</b-link>
-      </b-list-group-item>
-    </b-list-group>
-    <b-list-group>
-      <strong class="bd-links-heading">
-        <b-link :to="withBase('/docs/directives')">
-          <code-slash-icon aria-hidden />
-          Directives
-        </b-link>
-      </strong>
-      <b-list-group-item v-for="component in directivesComputedList" :key="component.name">
-        <b-link :to="component.route">{{ component.name }}</b-link>
-      </b-list-group-item>
-    </b-list-group>
+      <BListGroupItem v-for="component in group.children" :key="component.name">
+        <BLink
+          :to="component.route"
+          :active="routerRoute.path === `${component.route}.html`"
+          class="px-2 ms-2 rounded"
+          active-class="bg-primary text-light"
+        >
+          {{ component.name }}
+        </BLink>
+      </BListGroupItem>
+    </BListGroup>
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue'
 import {BLink, BListGroup, BListGroupItem} from 'bootstrap-vue-next'
-import {withBase} from 'vitepress'
+import {useRoute, withBase} from 'vitepress'
 import {useMediaQuery} from '@vueuse/core'
 import IntersectIcon from '~icons/bi/intersect'
 import CodeSlashIcon from '~icons/bi/code-slash'
@@ -64,6 +47,8 @@ defineProps<{
   route?: string
 }>()
 
+const routerRoute = useRoute()
+
 const isLargeScreen = useMediaQuery('(min-width: 992px)')
 const routeLocationComponents = (name: string): string =>
   withBase(`/docs/components/${name.toLowerCase()}`).trim().replaceAll(/\s+/g, '-')
@@ -71,6 +56,29 @@ const routeLocationComposables = (name: string): string =>
   withBase(`/docs/composables/${name}`).trim()
 const routeLocationDirectives = (name: string): string =>
   withBase(`/docs/directives/${name}`).trim()
+
+const headerLinks = [
+  {
+    route: withBase('/docs'),
+    label: 'Getting Started',
+  },
+  {
+    route: withBase('/docs/icons'),
+    label: 'Icons',
+  },
+  {
+    route: withBase('/docs/types'),
+    label: 'Types',
+  },
+  {
+    route: withBase('/docs/reference'),
+    label: 'Reference',
+  },
+  {
+    route: withBase('/docs/migration-guide'),
+    label: 'Migrate',
+  },
+]
 
 const componentsList: {name: string}[] = [
   {name: 'Accordion'},
@@ -87,6 +95,7 @@ const componentsList: {name: string}[] = [
   {name: 'Dropdown'},
   {name: 'Form'},
   {name: 'Form Checkbox'},
+  {name: 'Form File'},
   {name: 'Form Group'},
   {name: 'Form Input'},
   {name: 'Form Radio'},
@@ -149,4 +158,25 @@ const directivesComputedList = computed(() =>
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 )
+
+const groupComputedList = computed(() => [
+  {
+    label: 'Components',
+    uri: '/docs/components',
+    icon: () => IntersectIcon,
+    children: componentsComputedList.value,
+  },
+  {
+    label: 'Composables',
+    uri: '/docs/composables',
+    icon: () => PieChartIcon,
+    children: composablesComputedList.value,
+  },
+  {
+    label: 'Directives',
+    uri: '/docs/directives',
+    icon: () => CodeSlashIcon,
+    children: directivesComputedList.value,
+  },
+])
 </script>

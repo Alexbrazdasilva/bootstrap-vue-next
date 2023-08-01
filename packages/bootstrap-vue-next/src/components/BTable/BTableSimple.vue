@@ -15,37 +15,38 @@ import {computed} from 'vue'
 import {useBooleanish} from '../../composables'
 import type {Booleanish, Breakpoint, ClassValue, ColorVariant} from '../../types'
 
-interface BTableSimpleProps {
-  bordered?: Booleanish
-  borderless?: Booleanish
-  borderVariant?: ColorVariant | null
-  captionTop?: Booleanish
-  dark?: Booleanish
-  hover?: Booleanish
-  responsive?: boolean | Breakpoint
-  stacked?: boolean | Breakpoint
-  striped?: Booleanish
-  small?: Booleanish
-  tableClass?: ClassValue
-  tableVariant?: ColorVariant | null
-  stickyHeader?: Booleanish
-}
-
-const props = withDefaults(defineProps<BTableSimpleProps>(), {
-  borderVariant: null,
-  tableClass: undefined,
-  tableVariant: null,
-  bordered: false,
-  borderless: false,
-  captionTop: false,
-  dark: false,
-  hover: false,
-  responsive: false,
-  stacked: false,
-  striped: false,
-  small: false,
-  stickyHeader: false,
-})
+const props = withDefaults(
+  defineProps<{
+    bordered?: Booleanish
+    borderless?: Booleanish
+    borderVariant?: ColorVariant | null
+    captionTop?: Booleanish
+    dark?: Booleanish
+    hover?: Booleanish
+    responsive?: boolean | Breakpoint
+    stacked?: boolean | Breakpoint
+    striped?: Booleanish
+    small?: Booleanish
+    tableClass?: ClassValue
+    tableVariant?: ColorVariant | null
+    stickyHeader?: Booleanish
+  }>(),
+  {
+    borderVariant: null,
+    tableClass: undefined,
+    tableVariant: null,
+    bordered: false,
+    borderless: false,
+    captionTop: false,
+    dark: false,
+    hover: false,
+    responsive: false,
+    stacked: false,
+    striped: false,
+    small: false,
+    stickyHeader: false,
+  }
+)
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,6 +63,7 @@ const stripedBoolean = useBooleanish(() => props.striped)
 const stickyHeaderBoolean = useBooleanish(() => props.stickyHeader)
 
 const computedClasses = computed(() => [
+  props.tableClass,
   'table',
   'b-table',
   {
@@ -77,14 +79,11 @@ const computedClasses = computed(() => [
     'table-sm': smallBoolean.value,
     [`table-${props.tableVariant}`]: props.tableVariant !== null,
   },
-  props.tableClass,
 ])
 
-const responsiveClasses = computed(() => [
-  {
-    'table-responsive': props.responsive === true,
-    [`table-responsive-${props.responsive}`]: typeof props.responsive === 'string',
-    'b-table-sticky-header': stickyHeaderBoolean.value,
-  },
-])
+const responsiveClasses = computed(() => ({
+  'table-responsive': props.responsive === true,
+  [`table-responsive-${props.responsive}`]: typeof props.responsive === 'string',
+  'b-table-sticky-header': stickyHeaderBoolean.value,
+}))
 </script>

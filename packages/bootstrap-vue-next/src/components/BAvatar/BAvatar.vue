@@ -4,7 +4,9 @@
     class="b-avatar"
     :class="computedClasses"
     :style="computedStyle"
-    v-bind="computedAttrs"
+    v-bind="computedLinkProps"
+    :type="buttonBoolean && !computedLink ? props.buttonType : undefined"
+    :disabled="disabledBoolean || null"
     @click="clicked"
   >
     <span v-if="hasDefaultSlot" class="b-avatar-custom">
@@ -24,59 +26,85 @@
 </template>
 
 <script setup lang="ts">
-import {avatarGroupInjectionKey, isEmptySlot, isNumeric, toFloat} from '../../utils'
+import {avatarGroupInjectionKey, isEmptySlot, isLink, isNumeric, pick, toFloat} from '../../utils'
 import {computed, type CSSProperties, inject, type StyleValue, useSlots} from 'vue'
-import type {Booleanish, ButtonType, ColorVariant, Size, TextColorVariant} from '../../types'
+import type {
+  BLinkProps,
+  Booleanish,
+  ButtonType,
+  ColorVariant,
+  Size,
+  TextColorVariant,
+} from '../../types'
 import {useBooleanish} from '../../composables'
+import BLink from '../BLink/BLink.vue'
 
-interface BAvatarProps {
-  alt?: string
-  ariaLabel?: string
-  badge?: boolean | string
-  badgeLeft?: Booleanish
-  badgeOffset?: string
-  badgeTop?: Booleanish
-  badgeVariant?: ColorVariant | null
-  button?: Booleanish
-  buttonType?: ButtonType
-  disabled?: Booleanish
-  icon?: string
-  rounded?: boolean | string
-  size?: Size | string // TODO number --> compat
-  square?: Booleanish
-  src?: string
-  text?: string
-  textVariant?: TextColorVariant | null
-  variant?: ColorVariant | null
-}
+const props = withDefaults(
+  defineProps<
+    {
+      alt?: string
+      badge?: boolean | string
+      badgeLeft?: Booleanish
+      badgeOffset?: string
+      badgeTop?: Booleanish
+      badgeVariant?: ColorVariant | null
+      button?: Booleanish
+      buttonType?: ButtonType
+      disabled?: Booleanish
+      icon?: string
+      rounded?: boolean | string
+      size?: Size | string // TODO number --> compat
+      square?: Booleanish
+      src?: string
+      text?: string
+      textVariant?: TextColorVariant | null
+      variant?: ColorVariant | null
+    } & Omit<BLinkProps, 'event' | 'routerTag'>
+  >(),
+  {
+    badgeOffset: undefined,
+    icon: undefined,
+    size: undefined,
+    src: undefined,
+    text: undefined,
+    textVariant: null,
+    alt: 'avatar',
+    badge: false,
+    badgeLeft: false,
+    badgeTop: false,
+    badgeVariant: 'primary',
+    button: false,
+    buttonType: 'button',
+    disabled: false,
+    rounded: 'circle',
+    square: false,
+    variant: 'secondary',
+    // Link props
+    active: undefined,
+    activeClass: 'router-link-active',
+    append: false,
+    href: undefined,
+    // noPrefetch: {type: [Boolean, String] as PropType<Booleanish>, default: false},
+    // prefetch: {type: [Boolean, String] as PropType<Booleanish>, default: null},
+    rel: undefined,
+    replace: false,
+    routerComponentName: 'router-link',
+    target: '_self',
+    to: undefined,
+    opacity: undefined,
+    opacityHover: undefined,
+    underlineVariant: null,
+    underlineOffset: undefined,
+    underlineOffsetHover: undefined,
+    underlineOpacity: undefined,
+    underlineOpacityHover: undefined,
+  }
+)
 
-const props = withDefaults(defineProps<BAvatarProps>(), {
-  ariaLabel: undefined,
-  badgeOffset: undefined,
-  icon: undefined,
-  size: undefined,
-  src: undefined,
-  text: undefined,
-  textVariant: null,
-  alt: 'avatar',
-  badge: false,
-  badgeLeft: false,
-  badgeTop: false,
-  badgeVariant: 'primary',
-  button: false,
-  buttonType: 'button',
-  disabled: false,
-  rounded: 'circle',
-  square: false,
-  variant: 'secondary',
-})
-
-interface BAvatarEmits {
-  (e: 'click', value: MouseEvent): void
-  (e: 'img-error', value: Event): void
-}
-
-const emit = defineEmits<BAvatarEmits>()
+const emit = defineEmits<{
+  'click': [value: MouseEvent]
+  'img-error': [value: Event]
+}>()
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,10 +127,12 @@ const buttonBoolean = useBooleanish(() => props.button)
 const disabledBoolean = useBooleanish(() => props.disabled)
 const squareBoolean = useBooleanish(() => props.square)
 
-const hasDefaultSlot = computed<boolean>(() => !isEmptySlot(slots.default))
-const hasBadgeSlot = computed<boolean>(() => !isEmptySlot(slots.badge))
+const hasDefaultSlot = computed(() => !isEmptySlot(slots.default))
+const hasBadgeSlot = computed(() => !isEmptySlot(slots.badge))
 
 const showBadge = computed<boolean>(() => !!props.badge || props.badge === '' || hasBadgeSlot.value)
+
+const computedLink = computed<boolean>(() => isLink(props))
 
 const computedSize = computed<string | null>(
   () => parentData?.size.value ?? computeSize(props.size)
@@ -114,11 +144,29 @@ const computedVariant = computed<ColorVariant | null>(
 
 const computedRounded = computed<string | boolean>(() => parentData?.rounded.value ?? props.rounded)
 
-const computedAttrs = computed(() => ({
-  'type': buttonBoolean.value ? props.buttonType : undefined,
-  'aria-label': props.ariaLabel || null,
-  'disabled': disabledBoolean.value || null,
-}))
+const computedLinkProps = computed(() =>
+  computedLink.value
+    ? pick(props, [
+        'active',
+        'activeClass',
+        'append',
+        'href',
+        'rel',
+        'replace',
+        'routerComponentName',
+        'target',
+        'to',
+        'variant',
+        'opacity',
+        'opacityHover',
+        'underlineVariant',
+        'underlineOffset',
+        'underlineOffsetHover',
+        'underlineOpacity',
+        'underlineOpacityHover',
+      ])
+    : {}
+)
 
 const badgeClasses = computed(() => ({
   [`bg-${props.badgeVariant}`]: props.badgeVariant !== null,
@@ -186,7 +234,9 @@ const marginStyle = computed(() => {
   return value ? {marginLeft: value, marginRight: value} : {}
 })
 
-const computedTag = computed<'button' | 'span'>(() => (buttonBoolean.value ? 'button' : 'span'))
+const computedTag = computed<typeof BLink | 'button' | 'span'>(() =>
+  computedLink.value ? BLink : buttonBoolean.value ? 'button' : 'span'
+)
 
 const computedStyle = computed<CSSProperties>(() => ({
   ...marginStyle.value,
@@ -198,10 +248,12 @@ const computeContrastVariant = (colorVariant: ColorVariant): 'dark' | 'light' =>
   colorVariant === 'light' || colorVariant === 'warning' ? 'dark' : 'light'
 
 const clicked = (e: MouseEvent): void => {
-  if (!disabledBoolean.value && buttonBoolean.value) emit('click', e)
+  if (!disabledBoolean.value && (computedLink.value || buttonBoolean.value)) emit('click', e)
 }
 
-const onImgError = (e: Event): void => emit('img-error', e)
+const onImgError = (e: Event) => {
+  emit('img-error', e)
+}
 </script>
 
 <script lang="ts">

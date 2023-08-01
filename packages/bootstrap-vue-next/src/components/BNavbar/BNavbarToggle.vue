@@ -4,7 +4,8 @@
     class="navbar-toggler"
     type="button"
     :class="computedClasses"
-    v-bind="computedAttrs"
+    :disabled="disabledBoolean"
+    :aria-label="label"
     @click="onClick"
   >
     <slot>
@@ -14,28 +15,27 @@
 </template>
 
 <script setup lang="ts">
-import {BToggle as vBToggle} from '../../directives'
+import {vBToggle} from '../../directives'
 import {computed} from 'vue'
 import type {Booleanish} from '../../types'
 import {useBooleanish} from '../../composables'
 
-interface Props {
-  disabled?: Booleanish
-  label?: string
-  target?: string | string[]
-}
+const props = withDefaults(
+  defineProps<{
+    disabled?: Booleanish
+    label?: string
+    target?: string | string[]
+  }>(),
+  {
+    label: 'Toggle navigation',
+    disabled: false,
+    target: undefined,
+  }
+)
 
-const props = withDefaults(defineProps<Props>(), {
-  label: 'Toggle navigation',
-  disabled: false,
-  target: undefined,
-})
-
-interface Emits {
-  (e: 'click', value: MouseEvent): void
-}
-
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  click: [value: MouseEvent]
+}>()
 
 defineSlots<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,11 +43,6 @@ defineSlots<{
 }>()
 
 const disabledBoolean = useBooleanish(() => props.disabled)
-
-const computedAttrs = computed(() => ({
-  'disabled': disabledBoolean.value,
-  'aria-label': props.label,
-}))
 
 const computedClasses = computed(() => ({
   disabled: disabledBoolean.value,

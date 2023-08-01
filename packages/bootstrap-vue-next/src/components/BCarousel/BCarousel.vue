@@ -1,13 +1,5 @@
 <template>
-  <div
-    :id="computedId"
-    ref="target"
-    :class="computedClasses"
-    @keydown.left="onKeydown(prev)"
-    @keydown.right="onKeydown(next)"
-    @mouseenter.stop="onMouseEnter"
-    @mouseleave.stop="onMouseLeave"
-  >
+  <div :id="computedId" ref="element" class="carousel slide pointer-event" :class="computedClasses">
     <div v-if="indicatorsBoolean" class="carousel-indicators">
       <!-- :data-bs-target="`#${computedId}`" is required since the classes target elems with that attr -->
       <button
@@ -23,7 +15,7 @@
     </div>
 
     <div ref="relatedTarget" class="carousel-inner">
-      <transition-group
+      <TransitionGroup
         :enter-from-class="enterClasses"
         :enter-active-class="enterClasses"
         :enter-to-class="enterClasses"
@@ -32,6 +24,7 @@
         :leave-to-class="leaveClasses"
         @before-leave="onBeforeLeave"
         @after-leave="onAfterLeave"
+        @after-enter="onAfterEnter"
       >
         <component
           :is="slide"
@@ -40,7 +33,7 @@
           :key="i"
           :class="{active: i === modelValue && isTransitioning === false}"
         />
-      </transition-group>
+      </TransitionGroup>
     </div>
 
     <template v-if="controlsBoolean">
@@ -67,59 +60,65 @@ import {
 import {computed, provide, readonly, ref, toRef, useSlots, watch} from 'vue'
 import {useBooleanish, useId} from '../../composables'
 import type {Booleanish} from '../../types'
-import {useIntervalFn, useSwipe, useToNumber, useVModel} from '@vueuse/core'
+import {
+  onKeyStroke,
+  useElementHover,
+  useIntervalFn,
+  useSwipe,
+  useToNumber,
+  useVModel,
+} from '@vueuse/core'
 
-interface BCarouselProps {
-  ride?: true | false | 'true' | 'false' | '' | 'carousel' // Booleanish | 'carousel'
-  noHoverPause?: Booleanish
-  rideReverse?: Booleanish
-  fade?: Booleanish
-  id?: string
-  imgHeight?: string
-  imgWidth?: string
-  background?: string
-  modelValue?: number
-  controls?: Booleanish
-  indicators?: Booleanish
-  interval?: number
-  noTouch?: Booleanish
-  noWrap?: Booleanish
-  controlsPrevText?: string
-  controlsNextText?: string
-  indicatorsButtonLabel?: string
-  keyboard?: Booleanish
-  touchThreshold?: number | string
-}
+const props = withDefaults(
+  defineProps<{
+    ride?: true | false | 'true' | 'false' | '' | 'carousel' // Booleanish | 'carousel'
+    noHoverPause?: Booleanish
+    rideReverse?: Booleanish
+    fade?: Booleanish
+    id?: string
+    imgHeight?: string
+    imgWidth?: string
+    background?: string
+    modelValue?: number
+    controls?: Booleanish
+    indicators?: Booleanish
+    interval?: number | string
+    noTouch?: Booleanish
+    noWrap?: Booleanish
+    controlsPrevText?: string
+    controlsNextText?: string
+    indicatorsButtonLabel?: string
+    keyboard?: Booleanish
+    touchThreshold?: number | string
+  }>(),
+  {
+    id: undefined,
+    imgHeight: undefined,
+    imgWidth: undefined,
+    background: undefined,
+    ride: false,
+    noHoverPause: false,
+    rideReverse: false,
+    modelValue: 0,
+    fade: false,
+    controls: false,
+    indicators: false,
+    keyboard: true,
+    interval: 5000,
+    noTouch: false,
+    noWrap: false,
+    controlsNextText: 'Next',
+    controlsPrevText: 'Previous',
+    indicatorsButtonLabel: 'Slide',
+    touchThreshold: 50,
+  }
+)
 
-const props = withDefaults(defineProps<BCarouselProps>(), {
-  id: undefined,
-  imgHeight: undefined,
-  imgWidth: undefined,
-  background: undefined,
-  ride: false,
-  noHoverPause: false,
-  rideReverse: false,
-  modelValue: 0,
-  fade: false,
-  controls: false,
-  indicators: false,
-  keyboard: true,
-  interval: 5000,
-  noTouch: false,
-  noWrap: false,
-  controlsNextText: 'Next',
-  controlsPrevText: 'Previous',
-  indicatorsButtonLabel: 'Slide',
-  touchThreshold: 50,
-})
-
-interface BCarouselEmits {
-  (e: 'slid', value: BvCarouselEvent): void
-  (e: 'slide', value: BvCarouselEvent): void
-  (e: 'update:modelValue', value: number): void
-}
-
-const emit = defineEmits<BCarouselEmits>()
+const emit = defineEmits<{
+  'slid': [value: BvCarouselEvent]
+  'slide': [value: BvCarouselEvent]
+  'update:modelValue': [value: number]
+}>()
 
 const slots = useSlots()
 
@@ -135,17 +134,17 @@ const controlsBoolean = useBooleanish(() => props.controls)
 const indicatorsBoolean = useBooleanish(() => props.indicators)
 const noTouchBoolean = useBooleanish(() => props.noTouch)
 const noWrapBoolean = useBooleanish(() => props.noWrap)
-const touchThresholdNumber = useToNumber(() => props.touchThreshold, {
-  nanToZero: true,
-  method: 'parseInt',
-})
+const touchThresholdNumber = useToNumber(() => props.touchThreshold)
+const intervalNumber = useToNumber(() => props.interval)
 
 const isTransitioning = ref(false)
 const rideStarted = ref(false)
 const direction = ref(true)
 const relatedTarget = ref<HTMLElement | null>(null)
-const target = ref<HTMLElement | null>(null)
+const element = ref<HTMLElement | null>(null)
 const previousModelValue = ref(modelValue.value)
+
+const isHovering = useElementHover(element)
 
 const rideResolved = computed<boolean | 'carousel'>(() =>
   isBooleanish(props.ride) ? resolveBooleanish(props.ride) : props.ride
@@ -170,7 +169,7 @@ const {pause, resume} = useIntervalFn(
   () => {
     rideReverseBoolean.value ? prev() : next()
   },
-  () => props.interval,
+  intervalNumber,
   {immediate: rideResolved.value === 'carousel'}
 )
 
@@ -179,12 +178,7 @@ const isRiding = computed(
     (rideResolved.value === true && rideStarted.value === true) || rideResolved.value === 'carousel'
 )
 const slides = computed(() => getSlotElements(slots.default, 'BCarouselSlide'))
-const computedClasses = computed(() => [
-  'carousel',
-  'slide',
-  'pointer-event',
-  {'carousel-fade': fadeBoolean.value},
-])
+const computedClasses = computed(() => ({'carousel-fade': fadeBoolean.value}))
 // TODO a general idea of showing only slides that are in bounds
 // const localValue = computed(() =>
 //   props.modelValue >= slides.value.length
@@ -198,7 +192,7 @@ const buildBvCarouselEvent = (event: 'slid' | 'slide') =>
   new BvCarouselEvent(event, {
     componentId: computedId.value,
     cancelable: false,
-    target: target.value,
+    target: element.value,
     direction: direction.value ? 'right' : 'left',
     from: previousModelValue.value,
     to: modelValue.value,
@@ -250,7 +244,7 @@ const onMouseLeave = () => {
   resume()
 }
 
-const {lengthX} = useSwipe(target, {
+const {lengthX} = useSwipe(element, {
   passive: true,
   onSwipeStart() {
     if (noTouchBoolean.value === true) return
@@ -282,6 +276,29 @@ const onAfterLeave = () => {
   emit('slid', buildBvCarouselEvent('slid'))
   isTransitioning.value = false
 }
+// carousel-item class is removed from the slide during the transition,
+// as is included within enter classes.
+// The first slide recovers carousel-item class,
+const onAfterEnter = (el: Element) => {
+  if (modelValue.value !== 0) {
+    el.classList.add('carousel-item')
+  }
+}
+
+onKeyStroke(
+  'ArrowLeft',
+  () => {
+    onKeydown(prev)
+  },
+  {target: element}
+)
+onKeyStroke(
+  'ArrowRight',
+  () => {
+    onKeydown(next)
+  },
+  {target: element}
+)
 
 watch(
   () => props.ride,
@@ -289,6 +306,14 @@ watch(
     rideStarted.value = false
   }
 )
+
+watch(isHovering, (newValue) => {
+  if (newValue) {
+    onMouseEnter()
+    return
+  }
+  onMouseLeave()
+})
 
 defineExpose({pause, resume, prev, next})
 
